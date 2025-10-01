@@ -4,4 +4,6 @@ Thumbs.db
 obj/
 bin/
 
+config.json
+
 .vscode/
