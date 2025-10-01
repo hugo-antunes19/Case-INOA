@@ -1,0 +1,13 @@
+{
+"SmtpSettings": {
+    "Host": "smtp.gmail.com",
+    "Port": 587,
+    "SenderEmail": "seuemail@exemplo.com",
+    "SenderPassword": "SUA SENHA AQUI"
+},
+"Recipients": [
+    "Recipients1@exemplo.com",
+    "Recipients2@exemplo.com",
+    "Recipients3@exemplo.com"
+]
+}
