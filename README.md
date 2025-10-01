@@ -95,9 +95,9 @@ Entretanto, surgiu a ideia de investigar padrões de projetos para uma melhor im
 
 ### Segunda Versão
 
-Na segunda versão, implementei o padrão do Observer, além de consertar alguns possíveis problemas de memória, como a requisição HTTP, que estava sendo feita inúmeras vezes.
+Na segunda versão, descobri a utilização do ```async``` em C# implementei o padrão do Observer, além de consertar alguns possíveis problemas de memória, como a instância HTTP, que estava sendo criada uma nova toda vez que acessava a API.
 
-Também foi implementado o ```catch { }``` de exceções e erros que podem ocorrer, uma vez que gostaríamos que a aplicação fosse robusta a erros e problemas. Dessa forma, a ausência de internet, assim como a falha no serviço SMTP, não *quebra* a aplicação, ela continuará em execução até a normalização dos recursos de rede, como é possível visualizar nos logs de Testes. Toda a aplicação foi testada e pode ser estudada pelos logs gerados em ```Case-INOA/Testes/```.
+Também foi implementado o ```catch { }``` para tratamento de exceções e erros que podem ocorrer, uma vez que gostaríamos que a aplicação fosse robusta a erros e problemas. Dessa forma, a ausência de internet, assim como a falha no serviço SMTP, não *quebra* a aplicação, ela continuará em execução até a normalização dos recursos de rede, como é possível visualizar nos logs de Testes. Toda a aplicação foi testada e pode ser estudada pelos logs gerados em ```Case-INOA/Testes/```.
 
 Essa segunda versão foi, com certeza, a mais difícil de implementar, uma vez que refatorei o código por completo.
 
