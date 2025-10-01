@@ -1,0 +1,9 @@
+{
+  "SmtpSettings": {
+    "Host": "smtp.gmail.com",
+    "Port": 587,
+    "SenderEmail": "seu-email-aqui@gmail.com",
+    "SenderPassword": "SUA_SENHA_DE_APP_AQUI"
+  },
+  "DefaultRecipient": "email_do_destinatario_aqui@exemplo.com"
+}
