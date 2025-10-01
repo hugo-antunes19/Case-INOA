@@ -1,162 +1,128 @@
 ﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
 using System.Globalization;
-using Newtonsoft.Json.Linq;
+using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.Mail;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
+using ConsoleApp.Interfaces; // Interfaces que criamos
+using ConsoleApp.Observers; // Os observadores do evento
 
+namespace ConsoleApp; // Namespace principal
 
 class Program
 {
+    // Criar apeas um cliente HTTP -> evita gasto de memória e problemas com sockets
+    private static readonly HttpClient _httpClient = new(); 
+
     static async Task Main(string[] args)
     {
-        string ativo = args[0].ToUpper();
-        float first = float.Parse(args[1], CultureInfo.InvariantCulture);
-        float second = float.Parse(args[2], CultureInfo.InvariantCulture);
-        int delay;
-        try
+        if (args.Length < 3 || !float.TryParse(args[1], NumberStyles.Any, CultureInfo.InvariantCulture, out float max) || !float.TryParse(args[2], NumberStyles.Any, CultureInfo.InvariantCulture, out float min))
         {
-            delay = int.Parse(args[3], CultureInfo.InvariantCulture);
+            Console.WriteLine("Uso correto: dotnet run -- <ATIVO> <MAX> <MIN>");
+            return;
         }
-        catch (IndexOutOfRangeException)
+        int Cooldown = 10; // Valor padrão do Cooldown do email
+        if (args.Length > 3)
         {
-            Console.WriteLine("O valor do delay não foi fornecido. Usando o valor padrão de 300 segundos. (5 minutos)");
-            delay = 300;
-        }
-        float max;
-        float min; 
-        // Definir variáveis para armazenar o valor máximo e mínimo do ativo a ser monitorado
-        // Erro caso o input seja errado
-        if (first > second)
-        {
-            max = first;
-            min = second;
+            if (!int.TryParse(args[3], out Cooldown))
+            {
+                Console.WriteLine($"AVISO: Cooldown '{args[3]}' inválido. Usando o padrão de {Cooldown} minutos.");
+            }
         }
         else
         {
-            max = second;
-            min = first;
+            Console.WriteLine($"AVISO: Cooldown não especificado, usando cooldown padrão de 10 minutos.");
         }
-        Console.WriteLine($"Monitorando o ativo {ativo} com valor máximo de {max} e valor mínimo de {min}. Verificando a cada {delay} segundos.");
+        string ativo = args[0].ToUpper();
+
+        // Optional = false -> O arquivo config.json é obrigatório para a aplicação
+        // Cria a variável para ler o arquivo de configuração
+        var config = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("config.json", optional: false) 
+            .Build();
+        // Cria a varíavel Subject (StockMonitor)
+        var stockMonitor = new StockMonitor(ativo);
+        var consoleDisplay = new ConsoleDisplayObserver();
+        var emailAlerter = new EmailAlertObserver(Math.Max(max, min), Math.Min(max, min), config, Cooldown);
+
+        // Atrela ao Subject (StockMonitor) os Observers (consoleDisplay e emailAlerter)
+        stockMonitor.Attach(consoleDisplay);
+        stockMonitor.Attach(emailAlerter);
+
+        Console.WriteLine("\n------ Iniciando Monitoramento com Padrão Observer ------");
+        Console.WriteLine("Pressione Ctrl + C para abortar o processamento.");
+        await Task.Delay(2000);
+
+        // O funcionamento principal do código: Checa o valor com StockMonitor e o ISubject Notifica os Observers
         while (true)
         {
-            float? currentlyPrice = ObterPrecoDoAtivo(ativo);
-            if (currentlyPrice == null)
-                {
-                    throw new InvalidOperationException($"Não foi possível obter o preço do {ativo}. Verifique se o código do {ativo} está correto.");
-                }
-            if (currentlyPrice > max)
-                {
-                    await EnviaMensagemEmail($"O ativo {ativo} ultrapassou o valor máximo de {max}. Preço atual: {currentlyPrice}. Recomendamos vender o ativo.", $"Como o ativo {ativo} atingiu um valor acima de {max}, sugerimos a venda.");
-                    // Aguardar 5 minutos antes de verificar novamente
-                    await Task.Delay(delay * 1000);
-                }
-                else if (currentlyPrice < min)
-                {
-                    await EnviaMensagemEmail($"O ativo {ativo} caiu abaixo do valor mínimo de {min}. Preço atual: {currentlyPrice}. Recomendamos comprar o ativo", $"Como o ativo {ativo} esteve abaixo de {min}, sugerimos a compra.");
-                    // Aguardar 5 minutos antes de verificar novamente
-                    await Task.Delay(delay * 1000);
-                }
-                else
-                {
-                    Console.WriteLine($"O ativo {ativo} está dentro da faixa definida. Preço atual: {currentlyPrice}");
-                    await Task.Delay(1000);
-                }
+            await stockMonitor.CheckPriceAsync();
+            await Task.Delay(1000); // Verifica 1 vez por segundo
         }
     }
-    public static async Task EnviaMensagemEmail(string bodyMessage = "Teste de envio de email usando configuração externa.", string subject = "Teste de Envio de Email")
+    
+    // Funções auxiliares EnviarEmail e ObterPreco (ambos implementados na Primeira versão)
+    #region Funções Auxiliares
+    public static async Task<float?> ObterPrecoDoAtivoAsync(string ativo)
     {
         try
         {
-            // Carregar as configurações do arquivo config.json
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("config.json", optional: false, reloadOnChange: true);
-
-            IConfiguration config = builder.Build();
-            // Lê o arquivo de configuração (config.json) e armazena os valores em variáveis
-            string? smtpHost = config["SmtpSettings:Host"];
-            string? portString = config["SmtpSettings:Port"];
-            string? emailRemetente = config["SmtpSettings:SenderEmail"];
-            string? senhaRemetente = config["SmtpSettings:SenderPassword"];
-            string? emailDestinatario = config["DefaultRecipient"];
-
-            // Trata o caso de valores nulos ou inválidos
-            if (string.IsNullOrEmpty(smtpHost) ||
-                string.IsNullOrEmpty(portString) ||
-                string.IsNullOrEmpty(emailRemetente) ||
-                string.IsNullOrEmpty(senhaRemetente) ||
-                string.IsNullOrEmpty(emailDestinatario))
+            // Realiza o HTTP Get para aquisição do valor do ativo
+            string url = $"https://brapi.dev/api/quote/{ativo}";
+            HttpResponseMessage response = await _httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
             {
-                throw new InvalidOperationException("Alguma configuração está ausente ou incorreta, cheque o arquivo config.json.");
-            }
-            
-            if (!int.TryParse(portString, out int smtpPort))
-            {
-                throw new InvalidOperationException("Alguma configuração está ausente ou incorreta, cheque o arquivo config.json.");
-            }
-
-            Console.WriteLine("Configurações carregadas. Preparando para enviar email...");
-
-            // Cria a mensagem com base no arquivo de configuração
-            var mensagem = new MailMessage();
-            mensagem.From = new MailAddress(emailRemetente);
-            mensagem.To.Add(new MailAddress(emailDestinatario));
-            mensagem.Subject = subject;
-            mensagem.Body = bodyMessage;
-            mensagem.IsBodyHtml = false;
-
-            // Configura o cliente SMTP
-            var smtpClient = new SmtpClient(smtpHost, smtpPort);
-            smtpClient.UseDefaultCredentials = false;
-            smtpClient.EnableSsl = true;
-            smtpClient.Credentials = new NetworkCredential(emailRemetente, senhaRemetente);
-
-            // Envia o email
-            Console.WriteLine("Enviando...");
-            await smtpClient.SendMailAsync(mensagem);
-
-            Console.WriteLine("Email enviado com sucesso!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ocorreu um erro: {ex.Message}");
-        }
-    }
-
-
-     public static float? ObterPrecoDoAtivo(string ativo)
-    {
-        try
-        {
-            using (var client = new HttpClient())
-            {
-                string url = $"https://brapi.dev/api/quote/{ativo}";
-                
-                HttpResponseMessage response = client.GetAsync(url).Result;
-
-                if (response.IsSuccessStatusCode)
-                {
-                    string jsonContent = response.Content.ReadAsStringAsync().Result;
-                    
-                    var jsonObject = JObject.Parse(jsonContent);
-                    var priceToken = jsonObject["results"]?[0]?["regularMarketPrice"];
-                    
-                    if (priceToken != null)
-                    {
-                        return (float)priceToken;
-                    }
-                }
+                string jsonContent = await response.Content.ReadAsStringAsync();
+                var jsonObject = JObject.Parse(jsonContent);
+                var priceToken = jsonObject["results"]?[0]?["regularMarketPrice"];
+                return priceToken != null ? (float)priceToken : null;
             }
         }
-        catch (Exception ex)
+        catch
         {
-            // Em caso de erro, podemos logar a mensagem e garantir que o método retorne null.
-            Console.WriteLine($"[Função ObterPrecoDoAtivo] Erro interno: {ex.Message}");
+            Console.WriteLine("Problemas de conexão ou acesso à API. Verifique sua conexão com a internet.");
         }
         return null;
     }
+
+    public static async Task EnviaMensagemEmailAsync(IConfiguration config, string bodyMessage, string subject)
+    {
+        try
+        {   // Acessa os parâmetros do config.json para envio do email
+            string? smtpHost = config["SmtpSettings:Host"];
+            if (string.IsNullOrEmpty(smtpHost)) throw new InvalidOperationException("Config 'SmtpSettings:Host' não encontrada.");
+            
+            if(!int.TryParse(config["SmtpSettings:Port"], out int smtpPort)) throw new FormatException("Config 'SmtpSettings:Port' é inválida.");
+
+            string? remetenteEmail = config["SmtpSettings:SenderEmail"];
+            if (string.IsNullOrEmpty(remetenteEmail)) throw new InvalidOperationException("Config 'SmtpSettings:SenderEmail' não encontrada.");
+            
+            string? remetenteSenha = config["SmtpSettings:SenderPassword"];
+            if (string.IsNullOrEmpty(remetenteSenha)) throw new InvalidOperationException("Config 'SmtpSettings:SenderPassword' não encontrada.");
+
+            string? destinatarioEmail = config["DefaultRecipient"];
+            if (string.IsNullOrEmpty(destinatarioEmail)) throw new InvalidOperationException("Config 'DefaultRecipient' não encontrada.");
+
+            var mensagem = new MailMessage(remetenteEmail, destinatarioEmail, subject, bodyMessage);
+            var smtpClient = new SmtpClient(smtpHost, smtpPort)
+            {
+                UseDefaultCredentials = false,
+                EnableSsl = true,
+                Credentials = new NetworkCredential(remetenteEmail, remetenteSenha)
+            };
+            
+            await smtpClient.SendMailAsync(mensagem);
+            Console.WriteLine("Email de alerta enviado com sucesso!");
+        }
+        // Trata possíveis erros do usuário
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Falha ao enviar email de alerta: {ex.Message}. Verifique o arquivo config.json");
+        }
+    }
+    #endregion
 }
