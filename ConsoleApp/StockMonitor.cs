@@ -20,7 +20,7 @@ public class StockMonitor : ISubject
     public void Attach(IObserver observer) => _observers.Add(observer);
     public void Detach(IObserver observer) => _observers.Remove(observer);
 
-    // Notifica os Observers sobre eventuais mudanças do Ativo
+    // Notifica os Observers do Ativo
     public async Task Notify()
     {
         foreach (var observer in new List<IObserver>(_observers))

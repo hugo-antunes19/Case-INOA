@@ -5,7 +5,7 @@ namespace ConsoleApp.Services;
 
 public class BrapiPriceService : IPriceService
 {
-    private static readonly HttpClient _httpClient = new();
+    private static readonly HttpClient _httpClient = new(); // Não cria novas instâncias -> melhora performance
 
     public async Task<float?> ObterPrecoDoAtivoAsync(string ativo)
     {
