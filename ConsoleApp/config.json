@@ -2,8 +2,12 @@
   "SmtpSettings": {
     "Host": "smtp.gmail.com",
     "Port": 587,
-    "SenderEmail": "Sender@gmail.com",
-    "SenderPassword": "sua senha do email"
+    "SenderEmail": "seuemail@exemplo.com",
+    "SenderPassword": "SUA SENHA AQUI"
   },
-  "DefaultRecipient": "Recipient@gmail.com"
+  "Recipients": [
+    "Recipients1@exemplo.com",
+    "Recipients2@exemplo.com",
+    "Recipients3@exemplo.com"
+  ]
 }

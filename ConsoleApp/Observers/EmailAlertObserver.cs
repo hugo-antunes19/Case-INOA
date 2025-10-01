@@ -20,12 +20,12 @@ public class EmailAlertObserver : IObserver
         _lastAlertTimestamp = DateTime.MinValue;
     }
 
-    public async Task Update(ISubject subject)
-    {   
+    public Task Update(ISubject subject) // Modificado para não ser async -> estava travando o console, apenas o email é async
+    {
         // Se enviou um email muito recentemente, não enviar novamente (Cooldown)
         if (DateTime.Now - _lastAlertTimestamp < _alertCooldown)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (subject is StockMonitor monitor && monitor.CurrentPrice.HasValue)
@@ -51,9 +51,10 @@ public class EmailAlertObserver : IObserver
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"\n!!! LIMITE ATINGIDO - Disparando alerta por email !!!\n");
                 Console.ResetColor();
-                await Program.EnviaMensagemEmailAsync(_config, alertBody, alertSubject);
-                _lastAlertTimestamp = DateTime.Now; 
+                _ = Program.EnviaMensagemEmailAsync(_config, alertBody, alertSubject);
+                _lastAlertTimestamp = DateTime.Now;
             }
         }
+        return Task.CompletedTask;
     }
 }

@@ -31,6 +31,10 @@ class Program
             {
                 Console.WriteLine($"AVISO: Cooldown '{args[3]}' inválido. Usando o padrão de {Cooldown} minutos.");
             }
+            else
+            {
+                Console.WriteLine($"Cooldown setado para {Cooldown} minutos.");
+            }
         }
         else
         {
@@ -103,18 +107,36 @@ class Program
             
             string? remetenteSenha = config["SmtpSettings:SenderPassword"];
             if (string.IsNullOrEmpty(remetenteSenha)) throw new InvalidOperationException("Config 'SmtpSettings:SenderPassword' não encontrada.");
+     
+            // Modificação: Permitir múltiplos destinatários
+            List<string>? recipients = config.GetSection("Recipients").Get<List<string>>();
+            if (recipients == null || recipients.Count == 0)
+            {
+                throw new InvalidOperationException("Nenhum destinatário encontrado na seção 'Recipients' do config.json.");
+            }
+            var mensagem = new MailMessage
+            {
+                From = new MailAddress(remetenteEmail),
+                Subject = subject,
+                Body = bodyMessage,
+                IsBodyHtml = false
+            };
+            foreach (var recipient in recipients)
+            {
+                if (!string.IsNullOrWhiteSpace(recipient))
+                {
+                    mensagem.To.Add(recipient);
+                }
+            }
 
-            string? destinatarioEmail = config["DefaultRecipient"];
-            if (string.IsNullOrEmpty(destinatarioEmail)) throw new InvalidOperationException("Config 'DefaultRecipient' não encontrada.");
-
-            var mensagem = new MailMessage(remetenteEmail, destinatarioEmail, subject, bodyMessage);
             var smtpClient = new SmtpClient(smtpHost, smtpPort)
             {
                 UseDefaultCredentials = false,
                 EnableSsl = true,
                 Credentials = new NetworkCredential(remetenteEmail, remetenteSenha)
             };
-            
+
+            Console.WriteLine($"Enviando email de alerta para {recipients.Count} destinatário(s)...");
             await smtpClient.SendMailAsync(mensagem);
             Console.WriteLine("Email de alerta enviado com sucesso!");
         }
