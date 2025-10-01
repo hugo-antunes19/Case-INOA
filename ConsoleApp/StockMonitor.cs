@@ -1,4 +1,5 @@
 using ConsoleApp.Interfaces;
+using ConsoleApp.Services;
 
 namespace ConsoleApp;
 
@@ -8,10 +9,12 @@ public class StockMonitor : ISubject
     private readonly List<IObserver> _observers = new(); // Lista dos Observers ("Partes Interessadas")
     public string Ativo { get; }
     public float? CurrentPrice { get; private set; }
+    private readonly IPriceService _priceService;
 
-    public StockMonitor(string ativo)
+    public StockMonitor(string ativo, IPriceService priceService)
     {
         Ativo = ativo;
+        _priceService = priceService;
     }
 
     public void Attach(IObserver observer) => _observers.Add(observer);
@@ -29,7 +32,7 @@ public class StockMonitor : ISubject
     // Pega o preço do ativo e notifica os Observers
     public async Task CheckPriceAsync()
     {
-        CurrentPrice = await Program.ObterPrecoDoAtivoAsync(Ativo);
+        CurrentPrice = await _priceService.ObterPrecoDoAtivoAsync(Ativo);
         if (CurrentPrice.HasValue)
         {
             await Notify();

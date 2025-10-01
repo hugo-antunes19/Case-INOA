@@ -1,5 +1,6 @@
 using ConsoleApp.Interfaces;
 using Microsoft.Extensions.Configuration; // IConfiguration para detalhes do email
+using ConsoleApp.Services;
 
 namespace ConsoleApp.Observers;
 
@@ -9,15 +10,17 @@ public class EmailAlertObserver : IObserver
     private readonly float _minPrice;
     private readonly IConfiguration _config;
     private readonly TimeSpan _alertCooldown;
-    private DateTime _lastAlertTimestamp; 
+    private DateTime _lastAlertTimestamp;
+    private readonly IEmailService _emailService;
 
-    public EmailAlertObserver(float maxPrice, float minPrice, IConfiguration config, int Cooldown)
+    public EmailAlertObserver(float maxPrice, float minPrice, IConfiguration config, int Cooldown, IEmailService emailService)
     {
         _maxPrice = maxPrice;
         _minPrice = minPrice;
         _config = config;
         _alertCooldown = TimeSpan.FromMinutes(Cooldown);
         _lastAlertTimestamp = DateTime.MinValue;
+        _emailService = emailService;
     }
 
     public Task Update(ISubject subject) // Modificado para não ser async -> estava travando o console, apenas o email é async
@@ -51,7 +54,7 @@ public class EmailAlertObserver : IObserver
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"\n!!! LIMITE ATINGIDO - Disparando alerta por email !!!\n");
                 Console.ResetColor();
-                _ = Program.EnviaMensagemEmailAsync(_config, alertBody, alertSubject);
+                _ = _emailService.EnviarAlertaAsync(_config, alertBody, alertSubject);
                 _lastAlertTimestamp = DateTime.Now;
             }
         }
