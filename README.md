@@ -6,9 +6,26 @@ Este é um programa de console que monitora a cotação de um ativo da B3 e envi
 
 * [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) (ou superior)
 
+## Uso da aplicação
+O usuário precisa passar **três** parâmetros para a aplicação, fora o preenchimento do arquivo de configuração (`config.json`).
+
+Para executar o programa, é necessário escolher o `ativo` que gostaria de monitorar, o valor máximo `MAX` e um valor `MIN` os quais delimitarão quando o alerta de email deve ser enviado.
+
+Além disso, o usuário também pode escolher o intervalo de envio dos alertas para evitar spams (`cooldown`), o valor padrão é de 10 minutos.
+
+Portanto, a aplicação **pode** ser executada em linha de comando da seguinte forma:
+
+```
+dotnet run <nome do ativo> <max> <min> <cooldown>
+```
+
+Sendo cooldown um parâmetro **opcional**
+
+---
+
 ## Como Configurar e Executar
 
-### Configuração (Igual para qualquer Sistema Operacional)
+### Configuração
 
 1.  **Clone o repositório:**
     ```sh
@@ -46,7 +63,7 @@ Este é um programa de console que monitora a cotação de um ativo da B3 e envi
 ---
 
 ### Executar - Windows (1ª Opção)
-
+Na pasta ConsoleAPP, siga as instruções:
 1.  **Compile o projeto:**
     Para garantir que todas as dependências foram baixadas e criar a versão final do programa, execute:
     ```sh
@@ -73,9 +90,9 @@ Este é um programa de console que monitora a cotação de um ativo da B3 e envi
 
 
 ### Executar - Windows (2ª Opção)
-
+Na pasta ConsoleAPP, siga as instruções:
 1.  **Execute o programa:**
-
+    Ao invés de criar um executável, como foi feito na 1ª Opção, vamos utilizar dotnet run para executar a nossa aplicação, seguido dos parâmetros escolhidos.
     ```sh
     donet run PETR4 22.67 22.59
     ```
@@ -89,8 +106,9 @@ Este é um programa de console que monitora a cotação de um ativo da B3 e envi
     donet run PETR4 22.67 22.59 30
     ```
 ---
-### Executar - Linux
 
+### Executar - Linux
+Na pasta ConsoleAPP, siga as instruções:
 1. **Fazer o update e instalação de dependências**
     ```
     sudo apt-get update
